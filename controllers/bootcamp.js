@@ -1,4 +1,5 @@
 const Bootcamp = require("../models/Bootcamp");
+const ErrorResponse = require("../utils/errorResponse");
 
 // @desc     Get all bootcamps
 // @route    GET /api/v1/bootcamps
@@ -7,7 +8,9 @@ const Bootcamp = require("../models/Bootcamp");
 exports.getBootCamps = async (req, res, next) => {
   try {
     const bootcamps = await Bootcamp.find();
-    res.status(200).json({ success: true, count: bootcamps.length, data: bootcamps });
+    res
+      .status(200)
+      .json({ success: true, count: bootcamps.length, data: bootcamps });
   } catch (error) {
     res.status(400).json({ success: false });
   }
@@ -21,12 +24,17 @@ exports.getBootCamp = async (req, res, next) => {
     const bootcamp = await Bootcamp.findById(req.params.id);
 
     if (!bootcamp) {
-      return res.status(400).json({ success: false });
+      return next(
+        new ErrorResponse(
+          `Bootcamp not found with the id ${req.params.id}`,
+          404
+        )
+      );
     }
 
     res.status(200).json({ success: true, data: bootcamp });
   } catch (error) {
-    res.status(400).json({ success: false });
+    next(error);
   }
 };
 
@@ -38,7 +46,7 @@ exports.createBootCamp = async (req, res, next) => {
     const bootcamp = await Bootcamp.create(req.body);
     res.status(201).json({ success: true, data: bootcamp });
   } catch (error) {
-    res.status(400).json({ success: false });
+    next(error);
   }
 };
 
@@ -46,20 +54,29 @@ exports.createBootCamp = async (req, res, next) => {
 // @route    PUT /api/v1/bootcamps/:id
 // @access    Private
 exports.updateBootCamp = async (req, res, next) => {
-  const updatedBootCamp = await Bootcamp.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    {
-      new: true,
-      runValidators: true,
+  try {
+    const updatedBootCamp = await Bootcamp.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedBootCamp) {
+      return next(
+        new ErrorResponse(
+          `Bootcamp not found with the id ${req.params.id}`,
+          404
+        )
+      );
     }
-  );
 
-  if (!updatedBootCamp) {
-    return res.status(400).json({ success: false });
+    res.status(200).json({ success: true, data: updatedBootCamp });
+  } catch (error) {
+    next(error);
   }
-
-  res.status(200).json({ success: true, data: updatedBootCamp });
 };
 
 // @desc     Delete bootcamp
@@ -70,11 +87,16 @@ exports.deleteBootCamp = async (req, res, next) => {
     const deletedBootCamp = await Bootcamp.findByIdAndDelete(req.params.id);
 
     if (!deletedBootCamp) {
-      return res.status(400).json({ success: false });
+      return next(
+        new ErrorResponse(
+          `Bootcamp not found with the id ${req.params.id}`,
+          404
+        )
+      );
     }
 
     res.status(200).json({ success: true, data: {} });
   } catch (error) {
-    return res.status(400).json({ success: false });
+    next(error);
   }
 };
