@@ -28,7 +28,7 @@ exports.getBootCamps = asyncHandler(async (req, res, next) => {
   );
 
   // The main query is done here
-  query = Bootcamp.find(JSON.parse(queryStr));
+  query = Bootcamp.find(JSON.parse(queryStr)).populate('courses');
 
   // selecting certain fields after the query is made
   if (req.query.select) {
@@ -131,13 +131,17 @@ exports.updateBootCamp = asyncHandler(async (req, res, next) => {
 // @route    DELETE /api/v1/bootcamps/:id
 // @access    Private
 exports.deleteBootCamp = asyncHandler(async (req, res, next) => {
-  const deletedBootCamp = await Bootcamp.findByIdAndDelete(req.params.id);
+  const deletedBootCamp = await Bootcamp.findById(req.params.id);
 
   if (!deletedBootCamp) {
     return next(
       new ErrorResponse(`Bootcamp not found with the id ${req.params.id}`, 404)
     );
   }
+
+  // because this one will actaully trigger the middleware
+  // that cascade deletes the courses under the bootcamps
+  deletedBootCamp.remove();
 
   res.status(200).json({ success: true, data: {} });
 });
