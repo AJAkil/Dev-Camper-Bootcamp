@@ -9,33 +9,21 @@ const asyncHandler = require("../middleware/async");
 //@access     Public
 exports.getCourses = asyncHandler(async (req, res, next) => {
 
-  let query; // a query variable
-
   // test to see if there is a bootcampID?
   if (req.params.bootcampId) {
-    query = Course.find({ bootcamp: req.params.bootcampId });
+    const bootcampCourses  = await Course.find({ bootcamp: req.params.bootcampId });
 
-    // if we cannot find the bootcamp
-    if (!query) {
-      return next(
-        new ErrorResponse(`Bootcamp not found with the id ${req.params.bootcampId}`, 404)
-      );
-    }
+    return res.status(200).json({
+      success: true,
+      count: bootcampCourses.length,
+      data: bootcampCourses
+    });
 
   } else {
-    query = Course.find().populate({
-      path: 'bootcamp',// the name of the property defined in schema
-      select: 'name description website'
-    });
+    // send all the courses here
+    res.status(200).json(res.advancedResults);
   }
 
-  const courses = await query;
-
-  res.status(200).json({
-    success: true,
-    count: courses.length,
-    data: courses,
-  });
 });
 
 
