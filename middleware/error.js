@@ -8,16 +8,16 @@ const errorHandler = (err, req, res, next) => {
   error.message = err.message;
 
   // Log to console for dev
-  console.log(err.errors);
+  //console.log('pera?',err);
 
-  // Mogoose bad objectId
+  // Mongoose bad objectId
   if (err.name === "CastError") {
     message = `Bootcamp not found with the id ${err.value}`;
     statusCode = 404
   }
 
   // Mongoose duplicate key error
-  if (err.code == 11000){
+  if (err.code === 11000){
       message = `Duplicate Field Value Entered`
       statusCode = 400
   }
@@ -28,7 +28,7 @@ const errorHandler = (err, req, res, next) => {
       statusCode = 400;
   }
 
-  error = new ErrorResponse(message, statusCode);
+  //error = new ErrorResponse(message, statusCode);
 
   res.status(error.statusCode || 404).json({
     success: false,
