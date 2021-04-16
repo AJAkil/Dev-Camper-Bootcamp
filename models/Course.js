@@ -38,43 +38,39 @@ const CourseSchema = new mongoose.Schema({
   },
 });
 
-
-CourseSchema.statics.getAverageCost = async function(bootcampId){
+CourseSchema.statics.getAverageCost = async function (bootcampId) {
   console.log(bootcampId);
 
   const obj = await this.aggregate([
     {
-      $match: { bootcamp: bootcampId}
+      $match: { bootcamp: bootcampId },
     },
     {
       $group: {
-        _id: '$bootcamp',
-        averageCost: { $avg: '$tuition'}
-      }
-    }
+        _id: "$bootcamp",
+        averageCost: { $avg: "$tuition" },
+      },
+    },
   ]);
 
-  try{
-    await this.model('Bootcamp').findByIdAndUpdate(bootcampId,{
-      averageCost: Math.ceil(obj[0].averageCost /10) * 10
+  try {
+    await this.model("Bootcamp").findByIdAndUpdate(bootcampId, {
+      averageCost: Math.ceil(obj[0].averageCost / 10) * 10,
     });
-  }catch(err){
-    console.log('Error');
+  } catch (err) {
+    console.log("Error");
   }
-}
-
-
+};
 
 // Call getAverageCost after save
-CourseSchema.post("save", function(){
+CourseSchema.post("save", function () {
   // since we are in the model we can do
   this.constructor.getAverageCost(this.bootcamp);
 });
 
 // Call getAverageCost before removal
-CourseSchema.pre("remove", function(){
+CourseSchema.pre("remove", function () {
   this.constructor.getAverageCost(this.bootcamp);
-})
-
+});
 
 module.exports = mongoose.model("Course", CourseSchema);

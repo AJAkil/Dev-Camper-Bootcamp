@@ -8,7 +8,6 @@ const path = require("path");
 // @route    GET /api/v1/bootcamps
 //@acess     Public
 exports.getBootCamps = asyncHandler(async (req, res, next) => {
-
   res.status(200).json(res.advancedResults);
 });
 
@@ -31,7 +30,23 @@ exports.getBootCamp = asyncHandler(async (req, res, next) => {
 // @route    POST /api/v1/bootcamps
 // @access    Private
 exports.createBootCamp = asyncHandler(async (req, res, next) => {
+  // add user to the req body
+  req.body.user = req.user;
+
+  // Check for published bootcamp
+  const publishedBootcamp = await Bootcamp.findOne({ user: req.user.id });
+
+  if (publishedBootcamp && req.user.role !== "admin") {
+    return next(
+      new ErrorResponse(
+        `The user with id ${req.user.id} has already published a bootcamp`,
+        400
+      )
+    );
+  }
+
   const bootcamp = await Bootcamp.create(req.body);
+
   res.status(201).json({ success: true, data: bootcamp });
 });
 
@@ -39,22 +54,31 @@ exports.createBootCamp = asyncHandler(async (req, res, next) => {
 // @route    PUT /api/v1/bootcamps/:id
 // @access    Private
 exports.updateBootCamp = asyncHandler(async (req, res, next) => {
-  const updatedBootCamp = await Bootcamp.findByIdAndUpdate(
-    req.params.id,
-    req.body,
-    {
-      new: true,
-      runValidators: true,
-    }
-  );
+  let bootcamp = await Bootcamp.findById(req.params.id);
 
-  if (!updatedBootCamp) {
+  if (!bootcamp) {
     return next(
       new ErrorResponse(`Bootcamp not found with the id ${req.params.id}`, 404)
     );
   }
 
-  res.status(200).json({ success: true, data: updatedBootCamp });
+  // Make sure it's the user that is updating the bootcamp
+  if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+    return next(
+      new ErrorResponse(
+        `User with id ${req.user.id} not authorized to update the bootcamp ${req.params.id}`,
+        401
+      )
+    );
+  }
+
+  // Then we update the bootcamp
+  bootcamp = await Bootcamp.findOneAndUpdate(req.params.id, req.params.body, {
+    new: true,
+    runValidators: true,
+  });
+
+  res.status(200).json({ success: true, data: bootcamp });
 });
 
 // @desc     Delete bootcamp
@@ -69,7 +93,17 @@ exports.deleteBootCamp = asyncHandler(async (req, res, next) => {
     );
   }
 
-  // because this one will actaully trigger the middleware
+  // Make sure it's the user that is updating the bootcamp
+  if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+    return next(
+      new ErrorResponse(
+        `User with id ${req.user.id} not authorized to update the bootcamp ${req.params.id}`,
+        401
+      )
+    );
+  }
+
+  // because this one will actually trigger the middleware
   // that cascade deletes the courses under the bootcamps
   deletedBootCamp.remove();
 
@@ -115,6 +149,16 @@ exports.uploadPhoto = asyncHandler(async (req, res, next) => {
     );
   }
 
+  // Make sure it's the user that is updating the bootcamp
+  if (bootcamp.user.toString() !== req.user.id && req.user.role !== "admin") {
+    return next(
+      new ErrorResponse(
+        `User with id ${req.user.id} not authorized to update the bootcamp ${req.params.id}`,
+        401
+      )
+    );
+  }
+
   if (!req.files) {
     return next(new ErrorResponse(`Please Upload a file`, 404));
   }
@@ -144,11 +188,11 @@ exports.uploadPhoto = asyncHandler(async (req, res, next) => {
       return next(new ErrorResponse(`Problem with file upload`, 500));
     }
 
-    await Bootcamp.findByIdAndUpdate(req.params.id, {photo: file.name})
+    await Bootcamp.findByIdAndUpdate(req.params.id, { photo: file.name });
 
     res.status(200).json({
       success: true,
-      data: file.name
-    })
+      data: file.name,
+    });
   });
 });
